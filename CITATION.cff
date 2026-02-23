@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the preferred citation below."
+title: "ImpulseResponse"
+authors:
+  - family-names: "Yoko"
+    given-names: "Matthew"
+    email: "mjy29@cam.ac.uk"
+license: "MIT"
+version: "v18"
+date-released: "2026-02-21"
+
+preferred-citation:
+  type: unpublished
+  title: "Bayesian Inference of Flame Impulse Responses"
+  authors:
+    - family-names: "Yoko"
+      given-names: "Matthew"
+    - family-names: "Polifke"
+      given-names: "Wolfgang"
+  year: 2026
