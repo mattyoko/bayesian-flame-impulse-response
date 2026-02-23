@@ -45,6 +45,18 @@ t = load(pathToTimeData)
     modelOrders=1:5, config=config);
 ```
 
+## Reproducing the figures
+
+This repo will evolve over time. To reproduce the figures in Yoko & Polifke 2026, make sure you
+check out the correct version:
+
+```git
+git clone https://github.com/mattyoko/bayesian-flame-impulse-response
+cd <repo>
+git checkout paper-v1.0
+```
+Then run the MATLAB script generateFigures.m
+
 ## Citation
 
 If you use this code in academic work, please cite the accompanying manuscript (preferred):

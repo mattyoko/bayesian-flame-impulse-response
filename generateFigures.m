@@ -13,6 +13,9 @@
 ptd  = 'data/BRS_EderSilva23/';
 
 %% Figure 1
+% Check git version is correct
+checkGit();
+
 % Generate default prior, as described in §4.1
 config = loadDefaultConfig();
 config.prior.mu = [0.00, 0.00, -1.80];
@@ -63,6 +66,9 @@ ylabel('$p(\tilde{\sigma}_i)$', interpreter='latex')
 title('(c) Prior over $\tilde{\sigma}$', interpreter='latex')
 
 %% Figure 3
+% Check git version is correct
+checkGit();
+
 % Load and normalize the data
 load(sprintf('%sdata_raw_incomp.mat',ptd));
 u = data_raw_incomp.u;
@@ -90,6 +96,8 @@ ylabel('normalized fluctuation')
 legend([hu,hq],{'$u''/ \bar{u}$','$q''/ \bar{q}$'},'interpreter','latex','box','off');
 
 %% Figures 4 - 6    
+% Check git version is correct
+checkGit();
 
 % General settings
 config = loadDefaultConfig();
@@ -223,6 +231,8 @@ box on
 drawnow
 
 %% Figures 7 - 8
+% Check git version is correct
+checkGit();
 
 % General settings
 config = loadDefaultConfig();
@@ -365,6 +375,8 @@ nexttile(2)
 legend([hE, hB],['exp' compose('%d%%',fact*100)],'box','off');
 
 %% Figures 9 - 10
+% Check git version is correct
+checkGit();
 
 % General settings
 config = loadDefaultConfig();
@@ -493,3 +505,21 @@ for ll = 1:length(fact)
 end
 
 
+
+%% Utilities
+function checkGit()
+    % Check that the current git version matches the required tag for paper-figure reproducibility.
+    requiredTag = "paper-v1.0";
+
+    % Fast: succeed only if HEAD is exactly at the tag (no history walk).
+    cmd = sprintf('git -C "%s" describe --tags --exact-match', pwd);
+    [st, out] = system(cmd);
+
+    if st == 0 && string(strtrim(out)) == requiredTag
+        return
+    else
+        error("generateFigures:NotAtFrozenTag", ...
+            "For reproducability, generateFigures.m must be run from the tag '%s'. \n\nRun:\n  git checkout %s\n", ...
+            requiredTag, requiredTag);
+    end
+end
