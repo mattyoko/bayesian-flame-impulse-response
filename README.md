@@ -15,21 +15,32 @@ This repository contains MATLAB code to:
 
 - `src/` core inference and signal-processing functions
 - `utils/` plotting and system-identification helpers
-- `testing/` diagnostic scripts (e.g., Taylor tests)
+- `data/` example LES data from Eder et al. 2023.
 - `generateFigures.m` reproduce figures from Yoko & Polifke, "Bayesian inference of flame impulse responses".
 
 ## Getting started
 
 1. Open the repository in MATLAB.
-2. Add `src/` and `utils/` to the MATLAB path.
+2. Add `src/`, `data/` and `utils/` to the MATLAB path.
 3. Load or prepare input/output signals `u(t)` and `q(t)` with time vector `t`.
 4. Run inference via `inferImpulseResponse(...)`.
 
 Minimal example:
 
 ```matlab
+% Set the default config, adjust however you want
 config = loadDefaultConfig();
-T_c = 50e-3 / 11.3;
+% Set the convective timescale of the system
+Lref = 50e-3;
+Uref = 11.3;
+T_c = Lref / Uref;
+
+% Load LES data
+u = load(pathToVelocityData)
+q = load(pathToHRRData)
+t = load(pathToTimeData)
+
+% Run model ranking, comparing orders 1 to 5
 [h, posterior, modelRanking] = inferImpulseResponse(u, q, t, T_c, ...
     modelOrders=1:5, config=config);
 ```
