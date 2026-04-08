@@ -15,36 +15,17 @@ function signals = prepareSignals(u, q, fs, T_h, config)
 %             * signals.time_domain.coarse: possibly down-sampled data.
 %             * signals.time_domain.fine: original-resolution data.
 
-% Compute single-sided spectrum of real-valued input signal, padding with
-% zeros to the nearest power of 2
-n_h = ceil(T_h * fs) + 1;  % desired impulse response length in samples
-n = length(u);
-n_padded = n + n_h - 1;
-Nfft = 2^nextpow2(n_padded);  % length of FFT after zero-padding
-
-[U, f] = rfft(u, fs, Nfft);
-
-% Estimate the cutoff frequency where 99.9% of the energy is retained
-psd = abs(U).^2;
-psd_cum = cumsum(psd);
-psd_cum = psd_cum / psd_cum(end);  % Normalize to [0,1]
-f_cut_idx = find(psd_cum >= 0.999, 1, 'first');
-if isempty(f_cut_idx)
-    f_cut = f(end);
-else
-    f_cut = f(f_cut_idx);
+% Determine the integer downsampling factor
+switch config.preproc.DSmode
+    case 'factor'
+        ds_factor = fix(config.preproc.DSvalue);
+    case 'frequency'
+        ds_factor = fix(fs ./ config.preproc.DSvalue);
+    case 'rate'
+        ds_factor = fix(fs .* config.preproc.DSvalue);
 end
 
-% Add 10% margin to cutoff frequency
-f_cut = f_cut * 1.1;
-
-% Compute integer downsampling factor (largest integer to satisfy Nyquist)
-ds_factor = max(1, floor(fs / (2 * f_cut))); 
-if ~isempty(config.preproc.DSlimit)
-    ds_factor = min(ds_factor,config.preproc.DSlimit);
-end
-
-if ds_factor == 1
+if ds_factor <= 1
     % No downsampling needed
     signals.time_domain.coarse = packageOutputs(u, q, fs, ds_factor, T_h);
     signals.time_domain.fine = signals.time_domain.coarse;
@@ -59,6 +40,48 @@ fs_ds = fs / ds_factor;
 % Package outputs
 signals.time_domain.coarse = packageOutputs(u_ds, q_ds, fs_ds, ds_factor, T_h);
 signals.time_domain.fine = packageOutputs(u, q, fs, 1, T_h);
+
+
+
+% !!! Legacy code from v1.0 - compute the PSD and downsample to just above
+% Nyquist. May want to bring back at some point.
+
+% % Compute single-sided spectrum of real-valued input signal, padding with
+% % zeros to the nearest power of 2
+% n_h = ceil(T_h * fs) + 1;  % desired impulse response length in samples
+% n = length(u);
+% n_padded = n + n_h - 1;
+% Nfft = 2^nextpow2(n_padded);  % length of FFT after zero-padding
+% 
+% [U, f] = rfft(u, fs, Nfft);
+% 
+% % Estimate the cutoff frequency where 99.9% of the energy is retained
+% psd = abs(U).^2;
+% psd_cum = cumsum(psd);
+% psd_cum = psd_cum / psd_cum(end);  % Normalize to [0,1]
+% f_cut_idx = find(psd_cum >= 0.999, 1, 'first');
+% if isempty(f_cut_idx)
+%     f_cut = f(end);
+% else
+%     f_cut = f(f_cut_idx);
+% end
+% 
+% % Add 10% margin to cutoff frequency
+% f_cut = f_cut * 1.1;
+% 
+% % Compute integer downsampling factor (largest integer to satisfy Nyquist)
+% ds_factor = max(1, floor(fs / (2 * f_cut))); 
+% if ~isempty(config.preproc.DSlimit)
+%     ds_factor = min(ds_factor,config.preproc.DSlimit);
+% end
+% 
+% if ds_factor == 1
+%     % No downsampling needed
+%     signals.time_domain.coarse = packageOutputs(u, q, fs, ds_factor, T_h);
+%     signals.time_domain.fine = signals.time_domain.coarse;
+%     return;
+% end
+
 end
 
 function signals = packageOutputs(u, q, fs, ds_factor, T_h)

@@ -12,7 +12,8 @@ function config = loadDefaultConfig()
 config = struct();
 
 % Preprocessing settings
-config.preproc.DSlimit = [];
+config.preproc.DSmode = 'factor'; % 'frequency' | 'rate' | 'factor'
+config.preproc.DSvalue = 1;
 
 % Prior settings    n    gam   beta
 config.prior.mu  = [0.0, 0.0, -1.8];

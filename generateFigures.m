@@ -380,9 +380,10 @@ checkGit();
 
 % General settings
 config = loadDefaultConfig();
-config.prior.mu = [0.00, 0.00, -1.08];
+config.prior.mu = [0.00, 0.00, -1.80];
 config.prior.sig= [1.00, 0.50, +0.50];
-config.preproc.DSlimit = 300;
+config.preproc.DSmode = 'rate';
+config.preproc.DSvalue = 3e-4;
 config.model.T_h = 0.015;
 config.model.LFL = 1;
 config.inference.runMCMC = true;
@@ -410,7 +411,7 @@ q_full = q;
 t_full = t;
 
 % Set the data reduction factors
-fact = [0.2 0.1 0.05];
+fact = [1.00 0.20 0.10];
 cols = getColours(3,length(fact));
 colExp = getColours(2);
 
