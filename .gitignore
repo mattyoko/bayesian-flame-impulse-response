@@ -2,3 +2,4 @@
 *.m~
 *.fig
 .DS_Store
+local/
