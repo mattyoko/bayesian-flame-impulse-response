@@ -9,22 +9,39 @@
 % Before running, ensure that the src, utils and data folders are added to
 % your path.
 
-%% Set paths
+%% !! Run this first !!
+% Set paths, system properties and load the full dataset
 ptd  = 'data/BRS_EderSilva23/';
 
-%% Figure 1
+% System properties:
+L_ref = 50e-3; % Flame length
+V_ref = 11.3; % Bulk flow velocity
+T_c  = L_ref/V_ref; % Reference time scale for non-dimensionalization
+
+% Load data
+load(sprintf('%sdata_raw_incomp.mat',ptd));
+exp_FTF = load(sprintf('%sFTF_exp_30kW_Front_lambda1.3.mat',ptd));
+
+u_full = data_raw_incomp.u;
+q_full = data_raw_incomp.y;
+dt = data_raw_incomp.Ts;
+t_full = (0:length(u_full)-1)*dt;
+t_full_ms = t_full*1e3;
+
+u_full = (u_full - mean(u_full))/mean(u_full);
+q_full = (q_full - mean(q_full))/mean(q_full);
+
+%% Figure 2
 % Check git version is correct
 checkGit();
 
 % Generate default prior, as described in §4.1
 config = loadDefaultConfig();
-config.prior.mu = [0.00, 0.00, -1.80];
-config.prior.sig= [1.00, 0.50, +0.50];
 [mu_b,Cb] = generatePrior(1,1,config);
 
 % Prepare plot
-f1 = figure(1);
-set(f1,'Units','normalized','Position',[0.1 0.1 0.6 0.3])
+f2 = figure(2);
+set(f2,'Units','normalized','Position',[0.1 0.1 0.6 0.3])
 tiledlayout(1,3,'padding','compact','TileSpacing','compact');
 
 % Plot prior over n
@@ -65,29 +82,18 @@ xlabel('$\tilde{\sigma}_i$', interpreter='latex')
 ylabel('$p(\tilde{\sigma}_i)$', interpreter='latex')
 title('(c) Prior over $\tilde{\sigma}$', interpreter='latex')
 
-%% Figure 3
+%% Figure 4
 % Check git version is correct
 checkGit();
 
-% Load and normalize the data
-load(sprintf('%sdata_raw_incomp.mat',ptd));
-u = data_raw_incomp.u;
-q = data_raw_incomp.y;
-dt = data_raw_incomp.Ts;
-t = (0:length(u)-1)*dt;
-t_ms = t*1e3; % Time in ms
-
-u = (u - mean(u))/mean(u);
-q = (q - mean(q))/mean(q);
-
 % Prepare the figure
-f3 = figure(3);
-set(f3,'Units','normalized','Position',[0.1 0.1 0.5 0.4])
+f5 = figure(4);
+set(f5,'Units','normalized','Position',[0.1 0.1 0.5 0.4])
 
 % Plot the normalized fluctuations
-hu = plot(t_ms,u,'color',getColours(1),'lineWidth',1);
+hu = plot(t_full_ms,u_full,'color',getColours(1),'lineWidth',1);
 hold on
-hq = plot(t_ms,q,'color',getColours(2),'lineWidth',1);
+hq = plot(t_full_ms,q_full,'color',getColours(2),'lineWidth',1);
 xlim([100, 130]);
 grid on
 box on
@@ -95,38 +101,20 @@ xlabel('time [ms]')
 ylabel('normalized fluctuation')
 legend([hu,hq],{'$u''/ \bar{u}$','$q''/ \bar{q}$'},'interpreter','latex','box','off');
 
-%% Figures 4 - 6    
+%% Figures 5 - 7    
 % Check git version is correct
 checkGit();
 
 % General settings
 config = loadDefaultConfig();
-config.prior.mu = [0.00, 0.00, -1.80];
-config.prior.sig= [1.00, 0.50, +0.50];
-config.preproc.DSlimit = 300;
-
-% System properties:
-L_ref = 50e-3; % Flame length
-V_ref = 11.3;  % Bulk flow velocity
-T_c   = L_ref/V_ref; % Reference time scale for non-dimensionalization
-
-% Load and normalize data
-load(sprintf('%sdata_raw_incomp.mat',ptd));
-exp_FTF = load(sprintf('%sFTF_exp_30kW_Front_lambda1.3.mat',ptd));
-
-u = data_raw_incomp.u;
-q = data_raw_incomp.y;
-dt = data_raw_incomp.Ts;
-t = (0:length(u)-1)*dt;
-
-u = (u - mean(u))/mean(u);
-q = (q - mean(q))/mean(q);
+config.preproc.DSmode = 'rate';
+config.preproc.DSvalue = 3e-4;
 
 % -------------------------------------------------------------------------
 % Run Bayesian inference for baseline case (LFL free)
 % -------------------------------------------------------------------------
 
-[h, posterior] = inferImpulseResponse(u, q, t, T_c, modelOrders=1:5, config=config);
+[h, posterior] = inferImpulseResponse(u_full, q_full, t_full, T_c, modelOrders=1:5, config=config);
 
 % Unpack posterior struct
 a = posterior.a;
@@ -156,7 +144,7 @@ baseline.Ca = Ca;
 config.model.LFL = 1; % Set low-frequency limit to 1
 
 % Run Bayesian inference
-[h, posterior, modelRanking] = inferImpulseResponse(u, q, t, T_c, modelOrders=1:5, config=config);
+[h, posterior, modelRanking] = inferImpulseResponse(u_full, q_full, t_full, T_c, modelOrders=1:5, config=config);
 
 % Unpack posterior struct
 a = posterior.a;
@@ -173,7 +161,7 @@ FTF = calculateFTF(a,omega,Ca);
 % Run SI using the settings from Eder et al. 2023
 % -------------------------------------------------------------------------
 
-signals = prepareSignals(u,q,1/dt,0,config);
+signals = prepareSignals(u_full,q_full,1/dt,0,config);
 uds = signals.time_domain.coarse.u;
 qds = signals.time_domain.coarse.q;
 tds = signals.time_domain.coarse.t;
@@ -189,11 +177,11 @@ colBaseline = getColours(4);
 colSI = getColours(3);
 
 modelLabels = {'N=1','N=2','N=3','N=4','N=5'};
-f4 = plotModelComparisonH(modelRanking.logML,modelRanking.logOF,modelRanking.logBFL,...
-    'modelLabels',modelLabels,'figUnits','Normalized','figWidth',0.6,'figHeight',0.5,'figNum',4);
+f5 = plotModelComparisonH(modelRanking.logML,modelRanking.logOF,modelRanking.logBFL,...
+    'modelLabels',modelLabels,'figUnits','Normalized','figWidth',0.6,'figHeight',0.5,'figNum',5);
 
-f5=figure(5);
-set(f5,'Units','normalized','Position',[0.1 0.1 0.5 0.4])
+f6=figure(6);
+set(f6,'Units','normalized','Position',[0.1 0.1 0.5 0.4])
 padding = 0.1;
 hold on
 hS  = errorpatch(hSI.time*1e3,hSI.val/1e3,2*hSI.std/1e3,2*hSI.std/1e3,'color',colSI);
@@ -207,8 +195,8 @@ grid on
 box on
 drawnow
 
-f6 = figure(6);
-set(f6,'Units','normalized','Position',[0.1 0.1 0.5 0.6])
+f7 = figure(7);
+set(f7,'Units','normalized','Position',[0.1 0.1 0.5 0.6])
 tiledlayout(2,1,'TileSpacing','compact','Padding','compact');
 nexttile(1); hold on
 hE  = plot(exp_FTF.freq_exp,exp_FTF.gain_exp,'o','color',colExp);
@@ -230,49 +218,32 @@ grid on
 box on
 drawnow
 
-%% Figures 7 - 8
+%% Figures 8 - 9
 % Check git version is correct
 checkGit();
 
 % General settings
 config = loadDefaultConfig();
-config.prior.mu = [0.00, 0.00, -1.80];
-config.prior.sig= [1.00, 0.50, +0.50];
-config.preproc.DSlimit = 300;
+config.preproc.DSmode = 'rate';
+config.preproc.DSvalue = 3e-4;
 config.model.T_h = 0.015;
 config.model.LFL = 1;
 
-% System properties:
-L_ref = 50e-3; % Flame length
-V_ref = 11.3; % Bulk flow velocity
-T_c  = L_ref/V_ref; % Reference time scale for non-dimensionalization
-
-% Load data
-load(sprintf('%sdata_raw_incomp.mat',ptd));
-exp_FTF = load(sprintf('%sFTF_exp_30kW_Front_lambda1.3.mat',ptd));
-
-u = data_raw_incomp.u;
-q = data_raw_incomp.y;
-dt = data_raw_incomp.Ts;
-t = (0:length(u)-1)*dt;
-
-u = (u - mean(u))/mean(u);
-q = (q - mean(q))/mean(q);
-
-u_full = u;
-q_full = q;
-t_full = t;
-
-fact = [1 0.2 0.1 0.05];
+fact = [1 0.2 0.15 0.05];
 cols = getColours([1 4],length(fact));
 colExp = getColours(2);
 
 N_h = fix(config.model.T_h / dt);
 
+% Initialize error table
+factLabels = compose('%d%%',fact(2:end)*100);
+N = length(fact)-1;
+errMat = nan(N,4);
+
 for ll = 1:length(fact)
 
     M = N_h + fix((length(u_full) - N_h)*fact(ll));
-    
+
     u = u_full(1:M);
     q = q_full(1:M);
     t = t_full(1:M);
@@ -289,6 +260,11 @@ for ll = 1:length(fact)
     hms.val = hms.val/1e3;
     hms.var = hms.var/1e6;
 
+    % Compute FTF
+    f = linspace(0,500);
+    omega = 2*pi*f;
+    FTF = calculateFTF(a,omega,Ca);
+
     % Run SI
     signals = prepareSignals(u,q,1/dt,0,config);
     uds = signals.time_domain.coarse.u;
@@ -300,8 +276,8 @@ for ll = 1:length(fact)
     omega = 2*pi*f;
     [hSI,FTFSI] = TFDSI(uds,qds,tds,N,omega);
     
-    f7=figure(7);
-    set(f7,'Units','normalized','Position',[0.1 0.1 0.5 0.6])
+    f8=figure(8);
+    set(f8,'Units','normalized','Position',[0.1 0.1 0.5 0.6])
     if ll == 1
         tiledlayout(2,1,'TileSpacing','compact','Padding','compact')
     end
@@ -322,11 +298,8 @@ for ll = 1:length(fact)
     grid on
     box on
     
-    f = linspace(0,500);
-    omega = 2*pi*f;
-    FTF = calculateFTF(a,omega,Ca);
-    f8 = figure(8);
-    set(f8,'Units','normalized','Position',[0.1 0.1 0.7 0.6])
+    f9 = figure(9);
+    set(f9,'Units','normalized','Position',[0.1 0.1 0.7 0.6])
     if ll == 1
         tiledlayout(2,2,'TileSpacing','compact','Padding','compact');
         nexttile(1); hold on
@@ -363,66 +336,53 @@ for ll = 1:length(fact)
     ylabel('$\angle{}\mathcal{F}$ [rad]','interpreter','latex')
     grid on
     box on
-    
+
+    if ll > 1
+        errMat(ll-1,1) = norm(FTFSI.gain - gainRef)/norm(gainRef);
+        errMat(ll-1,2) = norm(FTF.gain - gainRef)/norm(gainRef);
+        errMat(ll-1,3) = norm(FTFSI.phase - phaseRef)/norm(phaseRef);
+        errMat(ll-1,4) = norm(FTF.phase - phaseRef)/norm(phaseRef);
+    end
 end
 
-figure(7)
+err = array2table(errMat,"RowNames",factLabels,"VariableNames",{'GainSI','GainBI','PhaseSI','PhaseBI'});
+disp(err);
+
+figure(8)
 nexttile(1)
 legend(hS1,compose('%d%%',fact*100),'box','off');
 
-figure(8)
+figure(9)
 nexttile(2)
 legend([hE, hB],['exp' compose('%d%%',fact*100)],'box','off');
 
-%% Figures 9 - 10
+%% Figures 10 - 11
 % Check git version is correct
 checkGit();
 
 % General settings
 config = loadDefaultConfig();
-config.prior.mu = [0.00, 0.00, -1.80];
-config.prior.sig= [1.00, 0.50, +0.50];
 config.preproc.DSmode = 'rate';
 config.preproc.DSvalue = 3e-4;
 config.model.T_h = 0.015;
 config.model.LFL = 1;
 config.inference.runMCMC = true;
-config.inference.MCMCiter = 200000;
-
-% System properties:
-L_ref = 50e-3; % Flame length
-V_ref = 11.3; % Bulk flow velocity
-T_c  = L_ref/V_ref; % Reference time scale for non-dimensionalization
-
-% Load data
-load(sprintf('%sdata_raw_incomp.mat',ptd));
-exp_FTF = load(sprintf('%sFTF_exp_30kW_Front_lambda1.3.mat',ptd));
-
-u = data_raw_incomp.u;
-q = data_raw_incomp.y;
-dt = data_raw_incomp.Ts;
-t = (0:length(u)-1)*dt;
-
-u = (u - mean(u))/mean(u);
-q = (q - mean(q))/mean(q);
-
-u_full = u;
-q_full = q;
-t_full = t;
+config.inference.MCMCiter = 500000;
 
 % Set the data reduction factors
-fact = [1.00 0.20 0.10];
+fact = [1 0.2 0.05];
 cols = getColours(3,length(fact));
 colExp = getColours(2);
 
+% Set some constants
 N_h = fix(config.model.T_h / dt);
-
 N = 3;
 D = 3*N;               
-nbins = 30;
+nbins = 31;
 
-f9 = figure(1);
-set(f9,'Units','normalized','Position',[0.1 0.1 0.33 0.4])
+% Prepare the figure
+f10 = figure(10);
+set(f10,'Units','normalized','Position',[0.1 0.1 0.33 0.4])
 t1 = tiledlayout(N, 3, 'TileSpacing','none', 'Padding','compact');
 
 % Common z-grid and unit Gaussian (same for all tiles)
@@ -435,11 +395,6 @@ yMax   = 1.10*max(phi0);
 names = {'$n$','$\gamma$','$\beta$'};
 
 for ll = 1:length(fact)
-    if ll == 2
-        config.inference.plotMCMC = true;
-    else
-        config.inference.plotMCMC = false;
-    end
     M = N_h + fix((length(u_full) - N_h)*fact(ll));
 
     u = u_full(1:M);
@@ -459,7 +414,7 @@ for ll = 1:length(fact)
 
     % ---- Plot standardized marginals z = (x-mu)/sig ----
     for pp = 1:D
-        figure(f9);
+        figure(f10);
         ax = nexttile(pp);
         hold on
 
@@ -505,12 +460,24 @@ for ll = 1:length(fact)
     end
 end
 
+% Plot the full posterior for the 15% case
+fact = 0.15;
+M = N_h + fix((length(u_full) - N_h)*fact);
+
+u = u_full(1:M);
+q = q_full(1:M);
+t = t_full(1:M);
+
+config.inference.plotMCMC = true;
+
+inferImpulseResponse(u, q, t, T_c, modelOrders=N, config=config);
+
 
 
 %% Utilities
 function checkGit()
     % Check that the current git version matches the required tag for paper-figure reproducibility.
-    requiredTag = "paper-v1.0";
+    requiredTag = "paper-released";
 
     % Fast: succeed only if HEAD is exactly at the tag (no history walk).
     cmd = sprintf('git -C "%s" describe --tags --exact-match', pwd);

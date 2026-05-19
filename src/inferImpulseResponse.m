@@ -131,7 +131,7 @@ if config.inference.runMCMC
     if config.inference.plotMCMC
         fm = figure(1005);
         set(fm,'Position',[0 0 490 420]);
-        cornerHeatmap(mcmc.postSamples', bMAP, CbMAP, paramNames, 40)
+        cornerHeatmap(mcmc.postSamples', bMAP, CbMAP, paramNames, 31)
     end
 end
 end

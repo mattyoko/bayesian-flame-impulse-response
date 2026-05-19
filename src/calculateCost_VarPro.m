@@ -120,9 +120,9 @@ function [J,dJ,d2J,Ce_ME,J_like,p,b_out] = calculateCost_VarPro(signals,Ce,x,bp,
     % ------------------
 
     % Compute impulse response and sensitivities wrt b_out
-    [h, dhdb] = calculateImpulseResponse(b_out, b_th, T_c);
+    [~, dhdb] = calculateImpulseResponse(b_out, b_th, T_c);
     % Compute HRR prediction and sensitivities wrt x
-    p = conv(u, h, 'valid') .* dt;
+    p = A * n; % equivalent to conv(u, h, 'valid') .* dt;
     dpdx = zeros(Nd,2*P);
     for ii = 1:P
         col_gamma = 3*ii - 1;

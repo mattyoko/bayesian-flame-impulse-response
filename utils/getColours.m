@@ -4,7 +4,7 @@ function rgb = getColours(colIdx,gradCnt)
              41  52 122; % 1. Blue
             253 129  83; % 2. Orange
             221  48  37; % 3. Red
-            176 185 241; % 4. Blue2
+            142 152 211; % 4. Blue2
             255 255 255; % 5. White
     ]/255;
     
