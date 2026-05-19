@@ -45,7 +45,7 @@ This repo will evolve over time. To reproduce the figures in Yoko & Polifke 2026
 ```git
 git clone https://github.com/mattyoko/bayesian-flame-impulse-response
 cd <repo>
-git checkout paper-v1.0
+git checkout paper-released
 ```
 Then run the MATLAB script generateFigures.m
 
